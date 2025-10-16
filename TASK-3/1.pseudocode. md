@@ -1,0 +1,56 @@
+BAŞLA
+
+  // Kimlik doğrulama
+  Yaz "T.C. kimlik numaranızı giriniz:"
+  Oku tc
+  Yaz "Şifrenizi giriniz:"
+  Oku sifre
+
+  Eğer (tc ve sifre sistemde kayıtlı ise) ise
+      Yaz "Giriş başarılı"
+  Değilse
+      Yaz "Kimlik doğrulama başarısız. Tekrar deneyiniz."
+      Bitir
+  EğerSonu
+
+  // Poliklinik seçimi
+  Yaz "Mevcut poliklinikler: Kardiyoloji, Dahiliye, Göz, Ortopedi..."
+  Yaz "Randevu almak istediğiniz polikliniği seçiniz:"
+  Oku poliklinik
+
+  // Doktor listesi gösterimi
+  Yaz poliklinik & " polikliniğinde görevli doktorlar listeleniyor..."
+  DoktorListesi ← polikliniğe bağlı doktorlar
+  Yaz DoktorListesi
+  Yaz "Doktor seçiniz:"
+  Oku doktor
+
+  // Uygun saatlerin gösterimi
+  Yaz doktor & " için uygun randevu saatleri listeleniyor..."
+  SaatListesi ← doktorun uygun saatleri
+  Yaz SaatListesi
+  Yaz "Randevu saatini seçiniz:"
+  Oku saat
+
+  // Randevu onayı
+  Yaz "Randevu Bilgileri:"
+  Yaz "Poliklinik: ", poliklinik
+  Yaz "Doktor: ", doktor
+  Yaz "Saat: ", saat
+  Yaz "Onaylıyor musunuz? (E/H)"
+  Oku onay
+
+  Eğer (onay = 'E' veya onay = 'e') ise
+      Yaz "Randevu kaydediliyor..."
+      RandevuKaydet(tc, poliklinik, doktor, saat)
+      Yaz "Randevu başarıyla oluşturuldu."
+      
+      // SMS gönderimi
+      Yaz "SMS ile bilgilendirme gönderiliyor..."
+      SmsGonder(tc, "Randevunuz " + saat + " saatinde " + doktor + " ile onaylanmıştır.")
+      Yaz "SMS başarıyla gönderildi."
+  Değilse
+      Yaz "Randevu işlemi iptal edildi."
+  EğerSonu
+
+BİTİR
