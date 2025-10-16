@@ -1,0 +1,139 @@
+BAŞLA
+
+# Değişkenler
+ÖğrenciID <- oku()                # giriş yapmış öğrenci
+Dönem <- mevcut_dönem()
+SeçilenDersler <- boş_liste       # öğrencinin kayıtlamak istediği dersler
+OnaylıDersler <- boş_liste        # kontrolü geçmiş dersler
+ToplamKredi <- 0
+KrediLimit <- öğrenci_kredi_limiti(ÖğrenciID)   # bölüm/öğrenci bazlı limit
+DanışmanGerekli <- False
+HataMesajları <- boş_liste
+
+FONKSİYON: KONTENJAN_KONTROL(ders, adetIstendi)
+  mevcut <- ders_kontenjan(ders)
+  eğer (mevcut >= adetIstendi) ise
+    dön True
+  aksi halde
+    dön False
+  FonksiyonSonu
+
+FONKSİYON: ONKOSUL_KONTROL(öğrenci, ders)
+  önkoşullar <- ders_önkoşulları(ders)   # liste
+  TEKRARLA her bir p içinde önkoşullar
+    eğer (p NOT IN öğrenci_geçtiği_dersler(öğrenci)) ise
+      dön False
+  DÖNGÜ SONU
+  dön True
+  FonksiyonSonu
+
+FONKSİYON: ZAMAN_CAKIŞMA_KONTROL(ders, OnaylıDersler)
+  dersProgramı <- ders_zamanları(ders)  # örn: [{Gün, Baş, Bit}, ...]
+  TEKRARLA her bir d içinde OnaylıDersler
+    dProgram <- ders_zamanları(d)
+    eğer (zaman_normalizasyon_ve_çatışma_var_mı(dersProgramı, dProgram)) ise
+      dön False
+  DÖNGÜ SONU
+  dön True
+  FonksiyonSonu
+
+FONKSİYON: KREDI_LIMITI_KONTROL(ToplamKredi, eklenecekKredi, KrediLimit)
+  eğer (ToplamKredi + eklenecekKredi <= KrediLimit) ise
+    dön True
+  aksi halde
+    dön False
+  FonksiyonSonu
+
+FONKSİYON: DANIŞMAN_ONAYI_GEREKİYOR(ders, öğrenci)
+  eğer (ders_özel_durum(ders) = True) veya (öğrenci_akademik_durumu(öğrenci) = "uyarı" veya "sınırda") ise
+    dön True
+  aksi halde
+    dön False
+  FonksiyonSonu
+
+# Ders seçme döngüsü
+yaz("Kayıt yapmak istediğiniz dersleri tek tek giriniz. Bitirmek için '0' girin.")
+TEKRARLA
+  yaz("Ders kodu girin (veya 0 ile bitir):")
+  dersKod <- oku()
+  eğer (dersKod = 0) ise
+    çık_döngü
+  aksi halde
+    SeçilenDersler.ekle(dersKod)
+DÖNGÜ SONU
+
+# Her ders için tüm kontrolleri uygula
+TEKRARLA her bir ders içinde SeçilenDersler
+  yaz("İşleniyor: " + ders)
+  dersKredi <- ders_kredi(ders)
+  # 1) Kontenjan
+  eğer (KONTENJAN_KONTROL(ders, 1) = False) ise
+    HataMesajları.ekle(ders + " - Yetersiz kontenjan")
+    devam et # sonraki derse geç
+  # 2) Önkoşul
+  eğer (ONKOSUL_KONTROL(ÖğrenciID, ders) = False) ise
+    HataMesajları.ekle(ders + " - Önkoşul(lar) eksik")
+    devam et
+  # 3) Zaman çakışması
+  eğer (ZAMAN_CAKIŞMA_KONTROL(ders, OnaylıDersler) = False) ise
+    HataMesajları.ekle(ders + " - Zaman çakışması")
+    devam et
+  # 4) Kredi limiti
+  eğer (KREDI_LIMITI_KONTROL(ToplamKredi, dersKredi, KrediLimit) = False) ise
+    # Kredi limitini aşarsa danışman onayı gerekebilir
+    eğer (DANIŞMAN_ONAYI_GEREKİYOR(ders, ÖğrenciID) = True) ise
+      DanışmanGerekli <- True
+      HataMesajları.ekle(ders + " - Kredi limiti aşımı, danışman onayı gerekli")
+      devam et
+    aksi halde
+      HataMesajları.ekle(ders + " - Kredi limiti aşıyor")
+      devam et
+  # 5) Danışman onayı (ders özel durum)
+  eğer (DANIŞMAN_ONAYI_GEREKİYOR(ders, ÖğrenciID) = True) ise
+    DanışmanGerekli <- True
+    HataMesajları.ekle(ders + " - Danışman onayı gerekli")
+    devam et
+
+  # Eğer tüm kontroller geçtiyse
+  OnaylıDersler.ekle(ders)
+  ToplamKredi <- ToplamKredi + dersKredi
+DÖNGÜ SONU
+
+# Danışman onayı gerekiyorsa süreç
+eğer (DanışmanGerekli = True) ise
+  yaz("Bazı dersler için danışman onayı gerekli. Danışmana bildirim gönderiliyor...")
+  danışmanOnaySonucu <- DanışmanaOnayGönder(ÖğrenciID, OnaylıDersler)
+  eğer (danışmanOnaySonucu = "onaylandı") ise
+    yaz("Danışman onayı alındı. Onaylı dersler kaydediliyor.")
+  aksi
+    yaz("Danışman onayı reddedildi veya beklemede.")
+    HataMesajları.ekle("Danışman onayı alınamadı.")
+  EğerSonu
+Aksi
+  yaz("Danışman onayı gerekmedi.")
+
+# Eğer hiç onaylı ders yoksa hataları göster ve bitir
+eğer (OnaylıDersler.boş_mu() = True) ise
+  yaz("Hiçbir ders onaylanmadı. Hatalar:")
+  TEKRARLA her bir h içinde HataMesajları
+    yaz(h)
+  DÖNGÜ SONU
+  Bitir
+EğerSonu
+
+# Kesin kayıt: kontenjanı düşür, kayıt oluştur, onay SMS/email
+TEKRARLA her bir ders içinde OnaylıDersler
+  kontenjan_azalt(ders, 1)
+  dersKayitOlustur(ÖğrenciID, ders, Dönem)
+DÖNGÜ SONU
+
+yaz("Kayıt işlemi tamamlandı. Toplam kredi: " + ToplamKredi)
+yaz("Onaylanan dersler listesi:")
+TEKRARLA her bir d içinde OnaylıDersler
+  yaz(d)
+DÖNGÜ SONU
+
+# Bildirim gönder
+BildirimGönder(ÖğrenciID, "Ders kaydınız tamamlandı. Toplam kredi: " + ToplamKredi)
+
+Bitir
