@@ -1,0 +1,71 @@
+digraph DersKayitSistemi {
+  rankdir=TB;
+  node [fontname="Arial", fontsize=10, style=filled, fillcolor=white];
+
+  Basla [shape=oval, label="Başla"];
+  OgrenciGiris [shape=parallelogram, label="Öğrenci ID oku"];
+  DonemBelirle [shape=box, label="Mevcut dönemi belirle"];
+  DersGirisi [shape=parallelogram, label="Ders kodlarını sırayla oku (0 bitir)"];
+  DersDongu [shape=diamond, label="Ders kodu = 0 mı?"];
+
+  KontenjanKontrol [shape=diamond, label="Kontenjan yeterli mi?"];
+  OnkosulKontrol [shape=diamond, label="Önkoşul tamam mı?"];
+  ZamanKontrol [shape=diamond, label="Zaman çakışması var mı?"];
+  KrediKontrol [shape=diamond, label="Kredi limiti aşılır mı?"];
+  DanismanGerekli [shape=diamond, label="Danışman onayı gerekli mi?"];
+
+  DersEkle [shape=box, label="Ders onaylı listeye ekle"];
+  HataKaydet [shape=parallelogram, label="Hata mesajı ekle"];
+  ToplamKredi [shape=box, label="Toplam krediyi güncelle"];
+
+  DanismanAsama [shape=diamond, label="Danışman onayı gerekiyor mu?"];
+  DanismanOnay [shape=diamond, label="Danışman onayı alındı mı?"];
+  DanismanReddet [shape=parallelogram, label="Onay reddedildi / beklemede"];
+
+  OnayliDersVarMi [shape=diamond, label="Onaylı ders var mı?"];
+  KayitIslemi [shape=box, label="Ders kayıtlarını oluştur ve kontenjanı düşür"];
+  Bildirim [shape=box, label="SMS / E-posta bildirimi gönder"];
+  Bitir [shape=oval, label="Bitir"];
+
+  # Akış bağlantıları
+  Basla -> OgrenciGiris;
+  OgrenciGiris -> DonemBelirle;
+  DonemBelirle -> DersGirisi;
+  DersGirisi -> DersDongu;
+
+  DersDongu -> KontenjanKontrol [label="Hayır"];
+  DersDongu -> DanismanAsama [label="Evet (bitir)"];
+
+  KontenjanKontrol -> OnkosulKontrol [label="Evet"];
+  KontenjanKontrol -> HataKaydet [label="Hayır"];
+
+  OnkosulKontrol -> ZamanKontrol [label="Evet"];
+  OnkosulKontrol -> HataKaydet [label="Hayır"];
+
+  ZamanKontrol -> KrediKontrol [label="Hayır (çakışma yok)"];
+  ZamanKontrol -> HataKaydet [label="Evet (çakışma var)"];
+
+  KrediKontrol -> DanismanGerekli [label="Evet (limit aşılıyor)"];
+  KrediKontrol -> DersEkle [label="Hayır"];
+
+  DanismanGerekli -> HataKaydet [label="Evet"];
+  DanismanGerekli -> DersEkle [label="Hayır"];
+
+  DersEkle -> ToplamKredi;
+  ToplamKredi -> DersGirisi;
+
+  HataKaydet -> DersGirisi;
+
+  DanismanAsama -> DanismanOnay [label="Evet"];
+  DanismanAsama -> OnayliDersVarMi [label="Hayır"];
+
+  DanismanOnay -> OnayliDersVarMi [label="Evet"];
+  DanismanOnay -> DanismanReddet [label="Hayır"];
+  DanismanReddet -> Bitir;
+
+  OnayliDersVarMi -> KayitIslemi [label="Evet"];
+  OnayliDersVarMi -> Bitir [label="Hayır"];
+
+  KayitIslemi -> Bildirim;
+  Bildirim -> Bitir;
+}
