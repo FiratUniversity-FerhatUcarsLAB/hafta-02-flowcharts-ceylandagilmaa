@@ -1,0 +1,141 @@
+# E-TİCARET SİTESİ SEPET VE ÖDEME SİSTEMİ PSEUDOCODE
+
+Başla
+
+# --- 1. KULLANICI GİRİŞİ ---
+yaz("E-ticaret sitesine hoşgeldiniz.")
+yaz("Lütfen giriş yapınız veya misafir olarak devam ediniz.")
+yaz("1 - Giriş yap  |  2 - Misafir devam et")
+secim <- oku()
+
+eğer (secim = 1) ise
+    TEKRARLA
+        yaz("E-posta veya telefon numaranızı giriniz:")
+        email <- oku()
+        yaz("Şifrenizi giriniz:")
+        sifre <- oku()
+        eğer (email ve sifre sistemde kayıtlı ve doğru) ise
+            yaz("Giriş başarılı.")
+            kullanıcı_durumu <- "giriş_yaptı"
+            çık_döngü
+        aksi halde
+            yaz("Hatalı giriş. Tekrar deneyin.")
+    DÖNGÜ SONU
+aksi halde
+    yaz("Misafir olarak devam ediyorsunuz.")
+    kullanıcı_durumu <- "misafir"
+
+# --- 2. ÜRÜN EKLEME VE SEPET OLUŞTURMA ---
+Sepet <- boş_liste
+TEKRARLA
+    yaz("Ürün ID'sini giriniz (veya '0' yazarak çıkınız):")
+    urun_id <- oku()
+    eğer (urun_id = 0) ise
+        çık_döngü
+    aksi halde
+        yaz("Kaç adet eklemek istiyorsunuz?")
+        adet <- oku()
+        eğer (adet > 0) ise
+            # --- 3. STOK KONTROLÜ ---
+            mevcut_stok <- stok_sorgula(urun_id)
+            eğer (adet <= mevcut_stok) ise
+                yaz("Ürün sepete eklendi.")
+                sepet_ekle(Sepet, urun_id, adet)
+            aksi halde
+                yaz("Yetersiz stok. Maksimum eklenebilir miktar: " + mevcut_stok)
+        aksi halde
+            yaz("Geçersiz adet girişi.")
+DÖNGÜ SONU
+
+# --- 4. İNDİRİM KODU UYGULAMA ---
+yaz("İndirim kodunuz var mı? (Evet/Hayır)")
+cevap <- oku()
+eğer (küçült(cevap) = "evet") ise
+    yaz("İndirim kodunu giriniz:")
+    kod <- oku()
+    eğer (kod sistemde kayıtlı VE geçerli_tarih_aralığında(kod) VE kullanılmamış(kod)) ise
+        indirim_tutar <- hesapla_indirim(Sepet, kod)
+        yaz("İndirim uygulandı: " + indirim_tutar + " TL")
+    aksi halde
+        yaz("Kod geçersiz veya süresi dolmuş.")
+aksi halde
+    yaz("İndirim kodu uygulanmadı.")
+
+# --- 5. KARGO HESAPLAMA ---
+yaz("Lütfen teslimat adresinizi giriniz:")
+adres <- oku()
+yaz("Kargo tipi seçiniz (1-Standart, 2-Hızlı):")
+kargo_secim <- oku()
+
+eğer (kargo_secim = 1) ise
+    kargo_ucret <- 30
+aksi eğer (kargo_secim = 2) ise
+    kargo_ucret <- 60
+aksi halde
+    yaz("Geçersiz seçim, standart kargo seçildi.")
+    kargo_ucret <- 30
+
+# --- 6. SİPARİŞ ÖZETİ VE TUTAR HESAPLAMA ---
+ara_toplam <- sepet_toplam(Sepet)
+genel_toplam <- ara_toplam - indirim_tutar + kargo_ucret
+
+yaz("Sipariş Özeti:")
+yaz("Ara toplam: " + ara_toplam + " TL")
+yaz("İndirim: " + indirim_tutar + " TL")
+yaz("Kargo: " + kargo_ucret + " TL")
+yaz("Genel toplam: " + genel_toplam + " TL")
+
+# --- 7. ÖDEME AŞAMASI ---
+yaz("Ödeme yöntemi seçiniz:")
+yaz("1 - Kredi Kartı")
+yaz("2 - Banka Havalesi")
+yaz("3 - Dijital Cüzdan")
+ödeme_secim <- oku()
+
+eğer (ödeme_secim = 1) ise
+    yaz("Kart numaranızı giriniz:")
+    kart_no <- oku()
+    yaz("Son kullanma tarihi ve CVV giriniz:")
+    cvv <- oku()
+    eğer (kart_doğrula(kart_no, cvv)) ise
+        yaz("3D Secure doğrulaması gönderildi...")
+        eğer (3D_secure_onay()) ise
+            ödeme_durumu <- "başarılı"
+        aksi halde
+            ödeme_durumu <- "başarısız"
+    aksi halde
+        ödeme_durumu <- "başarısız"
+aksi eğer (ödeme_secim = 2) ise
+    yaz("Banka hesap bilgileri gösteriliyor...")
+    yaz("Havale referans numarası oluşturuldu.")
+    ödeme_durumu <- "beklemede"
+aksi eğer (ödeme_secim = 3) ise
+    yaz("Dijital cüzdan doğrulaması yapılıyor...")
+    eğer (cüzdan_onay()) ise
+        ödeme_durumu <- "başarılı"
+    aksi halde
+        ödeme_durumu <- "başarısız"
+aksi halde
+    yaz("Geçersiz seçim.")
+    ödeme_durumu <- "başarısız"
+
+# --- 8. ÖDEME SONUCU VE SİPARİŞ OLUŞTURMA ---
+eğer (ödeme_durumu = "başarılı") ise
+    stok_güncelle(Sepet)
+    sipariş_olustur(kullanıcı_durumu, Sepet, adres, genel_toplam)
+    yaz("Ödeme başarılı. Siparişiniz oluşturuldu.")
+    yaz("Sipariş numaranız e-posta adresinize gönderilmiştir.")
+aksi eğer (ödeme_durumu = "beklemede") ise
+    yaz("Havale işleminizi tamamlayınız. Siparişiniz ödeme sonrası aktif olacaktır.")
+aksi halde
+    yaz("Ödeme başarısız. Lütfen tekrar deneyin veya farklı bir yöntem seçin.")
+
+# --- 9. İŞLEM TEKRARI VE ÇIKIŞ ---
+yaz("Başka bir alışveriş yapmak ister misiniz? (Evet/Hayır)")
+devam <- oku()
+eğer (küçült(devam) = "evet") ise
+    git Başla
+aksi halde
+    yaz("Teşekkürler. Güle güle!")
+
+Bitir
