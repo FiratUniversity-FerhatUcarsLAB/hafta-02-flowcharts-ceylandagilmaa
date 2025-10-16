@@ -1,0 +1,91 @@
+digraph ETicaret {
+  rankdir=TB;
+  node [fontname="Arial", fontsize=10, style=filled, fillcolor=white];
+
+  Basla [shape=oval, label="Başla"];
+  GirisSecim [shape=parallelogram, label="1-Giriş yap / 2-Misafir devam et oku"];
+  GirisMi [shape=diamond, label="Seçim = 1 (Giriş yap)?"];
+  GirisKontrol [shape=diamond, label="Giriş bilgileri doğru mu?"];
+  GirisBasarili [shape=parallelogram, label="Giriş başarılı"];
+  Misafir [shape=parallelogram, label="Misafir olarak devam et"];
+  UrunDongu [shape=diamond, label="Ürün ID = 0 mı?"];
+  UrunOku [shape=parallelogram, label="Ürün ID ve adet oku"];
+  StokKontrol [shape=diamond, label="Stok yeterli mi?"];
+  SepeteEkle [shape=box, label="Sepete ekle"];
+  StokYetersiz [shape=parallelogram, label="Yetersiz stok uyarısı"];
+  IndirimVarMi [shape=diamond, label="İndirim kodu var mı?"];
+  IndirimGecerliMi [shape=diamond, label="Kod geçerli mi?"];
+  IndirimUygula [shape=box, label="İndirim uygula"];
+  IndirimGecersiz [shape=parallelogram, label="Kod geçersiz uyarısı"];
+  AdresOku [shape=parallelogram, label="Teslimat adresi oku"];
+  KargoSec [shape=parallelogram, label="Kargo tipi seç (1-Standart, 2-Hızlı)"];
+  KargoHesapla [shape=box, label="Kargo ücreti hesapla"];
+  OzetGoster [shape=parallelogram, label="Sipariş özetini göster"];
+  OdemeSec [shape=parallelogram, label="Ödeme yöntemi seç (1-3)"];
+  KartMi [shape=diamond, label="Kredi kartı mı?"];
+  KartGecerliMi [shape=diamond, label="Kart bilgileri doğru mu?"];
+  Secure3D [shape=diamond, label="3D Secure onayı başarılı mı?"];
+  HavaleMi [shape=diamond, label="Banka havalesi mi?"];
+  CuzdanMi [shape=diamond, label="Dijital cüzdan mı?"];
+  CuzdanOnay [shape=diamond, label="Cüzdan onayı başarılı mı?"];
+  OdemeBasarili [shape=box, label="Ödeme başarılı → Sipariş oluştur"];
+  HavaleBekle [shape=parallelogram, label="Havale beklemede mesajı"];
+  OdemeBasarisiz [shape=parallelogram, label="Ödeme başarısız uyarısı"];
+  TekrarSatinAl [shape=diamond, label="Başka alışveriş ister misiniz?"];
+  YenidenBasla [shape=oval, label="Başla (tekrar)"];
+  Bitir [shape=oval, label="Bitir"];
+
+  # Akış bağlantıları
+  Basla -> GirisSecim;
+  GirisSecim -> GirisMi;
+  GirisMi -> GirisKontrol [label="Evet"];
+  GirisMi -> Misafir [label="Hayır"];
+
+  GirisKontrol -> GirisBasarili [label="Evet"];
+  GirisKontrol -> GirisKontrol [label="Hayır (Tekrar dene)"];
+  GirisBasarili -> UrunOku;
+  Misafir -> UrunOku;
+
+  UrunOku -> UrunDongu;
+  UrunDongu -> IndirimVarMi [label="Evet (ID=0)"];
+  UrunDongu -> StokKontrol [label="Hayır"];
+  StokKontrol -> SepeteEkle [label="Evet"];
+  StokKontrol -> StokYetersiz [label="Hayır"];
+  SepeteEkle -> UrunOku;
+  StokYetersiz -> UrunOku;
+
+  IndirimVarMi -> IndirimGecerliMi [label="Evet"];
+  IndirimVarMi -> AdresOku [label="Hayır"];
+  IndirimGecerliMi -> IndirimUygula [label="Evet"];
+  IndirimGecerliMi -> IndirimGecersiz [label="Hayır"];
+  IndirimUygula -> AdresOku;
+  IndirimGecersiz -> AdresOku;
+
+  AdresOku -> KargoSec;
+  KargoSec -> KargoHesapla;
+  KargoHesapla -> OzetGoster;
+  OzetGoster -> OdemeSec;
+
+  OdemeSec -> KartMi;
+  KartMi -> KartGecerliMi [label="Evet"];
+  KartMi -> HavaleMi [label="Hayır"];
+
+  KartGecerliMi -> Secure3D [label="Evet"];
+  KartGecerliMi -> OdemeBasarisiz [label="Hayır"];
+  Secure3D -> OdemeBasarili [label="Evet"];
+  Secure3D -> OdemeBasarisiz [label="Hayır"];
+
+  HavaleMi -> CuzdanMi [label="Hayır"];
+  HavaleMi -> HavaleBekle [label="Evet"];
+  CuzdanMi -> CuzdanOnay [label="Evet"];
+  CuzdanMi -> OdemeBasarisiz [label="Hayır"];
+  CuzdanOnay -> OdemeBasarili [label="Evet"];
+  CuzdanOnay -> OdemeBasarisiz [label="Hayır"];
+
+  OdemeBasarili -> TekrarSatinAl;
+  HavaleBekle -> TekrarSatinAl;
+  OdemeBasarisiz -> TekrarSatinAl;
+
+  TekrarSatinAl -> YenidenBasla [label="Evet"];
+  TekrarSatinAl -> Bitir [label="Hayır"];
+}
