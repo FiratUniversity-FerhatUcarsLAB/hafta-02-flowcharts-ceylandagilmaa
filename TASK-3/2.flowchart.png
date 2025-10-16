@@ -1,0 +1,53 @@
+digraph HastaneRandevu {
+  rankdir=TB;
+  node [fontname="Arial", fontsize=10, style=filled, fillcolor=white];
+
+  Basla [shape=oval, label="Başla"];
+  TC_Giris [shape=parallelogram, label="T.C. kimlik numarasını oku"];
+  Sifre_Giris [shape=parallelogram, label="Şifreyi oku"];
+  Kimlik_Kontrol [shape=diamond, label="Kimlik ve şifre doğru mu?"];
+  GirisBasarili [shape=parallelogram, label="Giriş başarılı"];
+  GirisBasarisiz [shape=parallelogram, label="Giriş başarısız — işlem sonu"];
+  
+  PoliklinikList [shape=parallelogram, label="Poliklinikleri listele"];
+  PoliklinikSec [shape=parallelogram, label="Poliklinik seçimini oku"];
+  DoktorList [shape=parallelogram, label="Polikliniğe göre doktorları listele"];
+  DoktorSec [shape=parallelogram, label="Doktor seçimini oku"];
+  
+  SaatList [shape=parallelogram, label="Uygun saatleri listele"];
+  SaatSec [shape=parallelogram, label="Saat seçimini oku"];
+  
+  RandevuOnay [shape=parallelogram, label="Randevu bilgilerini göster ve onay iste"];
+  OnayKontrol [shape=diamond, label="Kullanıcı onayladı mı?"];
+  
+  RandevuKaydet [shape=box, label="Randevu kaydet"];
+  SmsGonder [shape=box, label="SMS gönder"];
+  RandevuIptal [shape=parallelogram, label="Randevu iptal edildi mesajı"];
+  
+  Bitir [shape=oval, label="Bitir"];
+
+  # Akış bağlantıları
+  Basla -> TC_Giris;
+  TC_Giris -> Sifre_Giris;
+  Sifre_Giris -> Kimlik_Kontrol;
+
+  Kimlik_Kontrol -> GirisBasarili [label="Evet"];
+  Kimlik_Kontrol -> GirisBasarisiz [label="Hayır"];
+  GirisBasarisiz -> Bitir;
+
+  GirisBasarili -> PoliklinikList;
+  PoliklinikList -> PoliklinikSec;
+  PoliklinikSec -> DoktorList;
+  DoktorList -> DoktorSec;
+  DoktorSec -> SaatList;
+  SaatList -> SaatSec;
+  SaatSec -> RandevuOnay;
+  RandevuOnay -> OnayKontrol;
+
+  OnayKontrol -> RandevuKaydet [label="Evet"];
+  OnayKontrol -> RandevuIptal [label="Hayır"];
+  RandevuIptal -> Bitir;
+
+  RandevuKaydet -> SmsGonder;
+  SmsGonder -> Bitir;
+}
