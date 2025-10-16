@@ -1,0 +1,165 @@
+BAŞLA
+
+# --- Değişkenler / Ayarlar ---
+POLL_INTERVAL <- 1 saniye                # sensör okuma aralığı
+ALARM_REPEAT_INTERVAL <- 60 saniye       # aynı alarm için tekrar bildirim aralığı
+CONFIRMATION_COUNT <- 2                  # tehdidi doğrulamak için gerekli ardışık pozitif okuma sayısı
+NOTIFY_RETRY <- 3                        # bildirim gönderim deneme sayısı
+CONTACT_LIST <- ["Sahip", "Telefon:0533...", "E-Posta:..."]  # bildirim alınacak kişiler/kanallar
+ARMED <- True                            # sistem kurulu/kurulu değil durumu
+MAINTENANCE_MODE <- False
+LOG <- boş_liste
+
+# --- Yardımcı Fonksiyonlar ---
+FONKSİYON: ReadSensors()
+  # Tüm sensörlerden güncel verileri al ve bir sözlük döndür
+  veriler <- {
+    "kapı": kapı_sensörü_oku(),
+    "pencere": pencere_sensörü_oku(),
+    "hareket": hareket_sensörü_oku(),
+    "duman": duman_sensörü_oku(),
+    "co": co_sensörü_oku(),
+    "sicaklik": sicaklik_sensörü_oku(),
+    "kamera": kamera_hareket_algoritması()
+  }
+  dön veriler
+FONKSİYONSONU
+
+FONKSİYON: DetectThreat(veriler)
+  # Çoklu sensör ve eşiklere göre tehdit seviyesi belirle
+  seviye <- "yok"
+  kanit_sayisi <- 0
+
+  eğer (veriler["duman"].seviye > DUMAN_ESIGI) ise
+    kanit_sayisi <- kanit_sayisi + 2
+  eğer (veriler["co"].ppm > CO_ESIGI) ise
+    kanit_sayisi <- kanit_sayisi + 2
+  eğer (veriler["hareket"] = True ve ARMED = True) ise
+    kanit_sayisi <- kanit_sayisi + 1
+  eğer (veriler["kapı"].açık = True ve ARMED = True) ise
+    kanit_sayisi <- kanit_sayisi + 1
+  eğer (veriler["kamera"].hareket_tespit = True) ise
+    kanit_sayisi <- kanit_sayisi + 1
+  # Eşiklere göre karar
+  eğer (kanit_sayisi >= 4) ise
+    seviye <- "kritik"
+  aksi eğer (kanit_sayisi >= 2) ise
+    seviye <- "orta"
+  aksi eğer (kanit_sayisi = 1) ise
+    seviye <- "şüpheli"
+  aksi
+    seviye <- "yok"
+  dön seviye
+FONKSİYONSONU
+
+FONKSİYON: ConfirmThreat(threat_type, confirm_count)
+  # Ardışık okumalarla yalancı alarmı azalt
+  sayaç <- 0
+  TEKRARLA (i = 1; i <= confirm_count; i = i + 1)
+    bekle(0.5 saniye)
+    v <- ReadSensors()
+    t <- DetectThreat(v)
+    eğer (t = threat_type) ise
+      sayaç <- sayaç + 1
+  DÖNGÜ SONU
+  eğer (sayaç = confirm_count) ise
+    dön True
+  aksi
+    dön False
+  FonksiyonSonu
+FONKSİYONSONU
+
+FONKSİYON: TriggerAlarm(seviye, veriler)
+  eğer (seviye = "kritik") ise
+    siren_on()
+    acil_mudahale_islemleri()     # gaz vanası kapat, anahtar kontakları bilgilendir vb.
+  aksi eğer (seviye = "orta") ise
+    siren_kisa_pulse()
+  aksi eğer (seviye = "şüpheli") ise
+    iç_uyari_ışığı_yak()
+  LogEvent("Alarm tetiklendi", seviye, veriler)
+FONKSİYONSONU
+
+FONKSİYON: SendNotification(seviye, veriler)
+  # Bildirimleri dene, başarısızsa kuyruğa al ve tekrar dene
+  mesaj <- compose_message(seviye, veriler, zaman=now())
+  deneme <- 0
+  başarılı <- False
+  TEKRARLA (deneme < NOTIFY_RETRY ve başarılı = False)
+    deneme <- deneme + 1
+    başarılı <- push_notification(CONTACT_LIST, mesaj)
+    eğer (başarılı = False) ise
+      bekle(5 saniye)
+  DÖNGÜ SONU
+  eğer (başarılı = False) ise
+    queue_offline_notification(mesaj)
+    LogEvent("Bildirim başarısız, kuyruğa alındı", seviye)
+  aksi
+    LogEvent("Bildirim gönderildi", seviye)
+FONKSİYONSONU
+
+FONKSİYON: LogEvent(not, seviye="", veriler=NULL)
+  kayit <- {zaman: now(), not: not, seviye: seviye, veriler: veriler}
+  LOG.ekle(kayit)
+  eğer (log_boyutu > 1000) ise
+    eski_logları_sil()
+FONKSİYONSONU
+
+# --- Ana Döngü (24/7) ---
+TEKRARLA (MAINTENANCE_MODE = False)
+  # Güç / bağlantı kontrolleri
+  eğer (power_ok() = False) ise
+    LogEvent("Güç sorunu tespit edildi")
+    switch_to_battery_mode()
+  eğer (network_ok() = False) ise
+    LogEvent("Ağ bağlantısı yok — bildirimler kuyruklanacak")
+
+  # Sensörleri oku
+  veriler <- ReadSensors()
+
+  # Tehdit tespiti
+  threat <- DetectThreat(veriler)
+
+  eğer (threat = "yok") ise
+    # Normal durum - periyodik durum raporu
+    eğer (zaman%300 = 0) ise   # her 5 dakikada bir özet log
+      LogEvent("Durum normal", veriler=veriler)
+    bekle(POLL_INTERVAL)
+    devam et
+  aksi
+    # Tehdidi doğrula (yalancı pozitif azaltma)
+    doğrulama <- ConfirmThreat(threat, CONFIRMATION_COUNT)
+    eğer (doğrulama = False) ise
+      LogEvent("Tehdit doğrulanamadı - potansiyel yalancı alarm", threat, veriler)
+      bekle(POLL_INTERVAL)
+      devam et
+    aksi
+      # Alarm tetikle ve bildir
+      TriggerAlarm(threat, veriler)
+      SendNotification(threat, veriler)
+
+      # Aynı tehdit için tekrar bildirimleri sınırla
+      son_alarm_zaman <- now()
+      TEKRARLA
+        bekle(ALARM_REPEAT_INTERVAL)
+        eğer (now() - son_alarm_zaman > 24 saat) ise
+          çık_döngü
+        # Durumu tekrar kontrol et; eğer tehdit sürüyorsa tekrar bildirim gönder
+        veriler2 <- ReadSensors()
+        threat2 <- DetectThreat(veriler2)
+        eğer (threat2 = threat) ise
+          SendNotification(threat2, veriler2)
+        aksi
+          LogEvent("Tehdit ortadan kalktı veya değişti", threat2, veriler2)
+          çık_döngü
+      DÖNGÜ SONU
+  EğerSonu
+DÖNGÜ SONU
+
+# Bakım veya kapatma durumunda güvenli işlemler
+eğer (MAINTENANCE_MODE = True) ise
+  siren_off()
+  LogEvent("Bakım moduna geçildi - sistem durduruldu")
+  BildirimGönder("Sistem bakım moduna alındı")
+
+Bitir
