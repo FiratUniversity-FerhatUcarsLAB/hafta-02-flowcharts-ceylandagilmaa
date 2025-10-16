@@ -1,0 +1,72 @@
+digraph ATM {
+  rankdir=TB;
+  node [fontname="Arial", fontsize=10, style=filled, fillcolor=white];
+
+  Start [shape=oval, label="Başla"];
+  PinCheck [shape=diamond, label="PIN doğru mu?"];
+  WrongPin [shape=parallelogram, label="Hatalı PIN - Kalan hak göster"];
+  Blocked [shape=oval, label="Kart bloke / Bitir"];
+  Menu [shape=parallelogram, label="Menüyü göster (1-4)"];
+  Choice [shape=diamond, label="Seçim?"];
+  
+  # Para çekme akışı
+  EnterAmount [shape=parallelogram, label="Çekilecek tutarı oku"];
+  CheckMultiple [shape=diamond, label="20 TL'nin katı mı?"];
+  CheckLimit [shape=diamond, label="Günlük limit uygun mu?"];
+  CheckBalance [shape=diamond, label="Yeterli bakiye var mı?"];
+  Withdraw [shape=box, label="Bakiyeden tutar düş\nParayı ver"];
+  ShowResult [shape=parallelogram, label="Yeni bakiye ve günlük toplamı yaz"];
+  AnotherTrans1 [shape=diamond, label="Başka işlem ister misiniz?"];
+
+  # Bakiye sorgulama
+  ShowBalance [shape=parallelogram, label="Mevcut bakiyeyi yaz"];
+  AnotherTrans2 [shape=diamond, label="Başka işlem ister misiniz?"];
+
+  # Günlük limit sorgulama
+  ShowLimit [shape=parallelogram, label="Günlük limit, kalan limit yaz"];
+  AnotherTrans3 [shape=diamond, label="Başka işlem ister misiniz?"];
+
+  # Çıkış
+  Exit [shape=oval, label="Kart iade / Bitir"];
+
+  # PIN doğrulama bağlantıları
+  Start -> PinCheck [label="PIN gir"];
+  PinCheck -> Menu [label="Evet"];
+  PinCheck -> WrongPin [label="Hayır"];
+  WrongPin -> PinCheck [label="3 hak dolmadı"];
+  WrongPin -> Blocked [label="3 hak doldu"];
+
+  # Menü seçimi
+  Menu -> Choice;
+  Choice -> EnterAmount [label="1. Para çekme"];
+  Choice -> ShowBalance [label="2. Bakiye sorgu"];
+  Choice -> ShowLimit [label="3. Limit sorgu"];
+  Choice -> Exit [label="4. Çıkış"];
+  Choice -> Menu [label="Geçersiz seçim"];
+
+  # Para çekme akışı
+  EnterAmount -> CheckMultiple;
+  CheckMultiple -> CheckLimit [label="Evet"];
+  CheckMultiple -> EnterAmount [label="Hayır (Tekrar gir)"];
+  CheckLimit -> CheckBalance [label="Evet"];
+  CheckLimit -> AnotherTrans1 [label="Hayır"];
+  CheckBalance -> Withdraw [label="Evet"];
+  CheckBalance -> AnotherTrans1 [label="Hayır"];
+  Withdraw -> ShowResult;
+  ShowResult -> AnotherTrans1;
+  AnotherTrans1 -> Menu [label="Evet"];
+  AnotherTrans1 -> Exit [label="Hayır"];
+
+  # Bakiye sorgulama akışı
+  ShowBalance -> AnotherTrans2;
+  AnotherTrans2 -> Menu [label="Evet"];
+  AnotherTrans2 -> Exit [label="Hayır"];
+
+  # Günlük limit sorgulama akışı
+  ShowLimit -> AnotherTrans3;
+  AnotherTrans3 -> Menu [label="Evet"];
+  AnotherTrans3 -> Exit [label="Hayır"];
+
+  # Çıkış
+  Exit -> Exit [label="Bitir"];
+}
