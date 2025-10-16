@@ -1,0 +1,16 @@
+digraph AkilliEvSistemi {
+  rankdir=TB;
+  node [fontname="Arial", fontsize=10, style=filled, fillcolor=white];
+
+  # Düğümler
+  Basla [shape=oval, label="Başla"];
+  BaslangicAyar [shape=box, label="Başlangıç ayarlarını yap (sensörler, log, bağlantı)"];
+  Dongu [shape=diamond, label="Sistem bakım modunda mı?"];
+  SensorOku [shape=parallelogram, label="Sensör verilerini oku"];
+  TehditKontrol [shape=diamond, label="Tehdit algılandı mı?"];
+  DurumNormal [shape=box, label="Durum normal - bekle ve devam et"];
+  Dogrulama [shape=diamond, label="Tehdit doğrulandı mı?"];
+  YalanciAlarm [shape=box, label="Yalancı alarm - logla ve devam et"];
+  AlarmTetikle [shape=box, label="Alarmı tetikle (siren, ışık, acil müdahale)"];
+  BildirimGonder [shape=box, label="Bildirim gönder (SMS/E-posta)"];
+  TehditTekrar [shape=diamond, label="Tehdit devam ediyor mu?"];
